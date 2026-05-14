@@ -1,0 +1,400 @@
+{
+  "info": {
+    "_postman_id": "5b8a40d7-aa34-4363-a928-857c8c14c344",
+    "name": "Cursorubcar Backend API",
+    "description": "Basic API smoke tests for the Go backend. Uses environment variable `baseUrl` and sets `token`/`userId` from the login response.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/health"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+              "const json = pm.response.json();",
+              "pm.test('status ok', function () { pm.expect(json.status).to.eql('ok'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth / Login (Passenger - seeded)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{passengerEmail}}\",\n  \"password\": \"{{passengerPassword}}\",\n  \"extraField\": \"this should be ignored\"\n}\n"
+        },
+        "url": "{{baseUrl}}/api/v1/auth/login"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+              "const json = pm.response.json();",
+              "pm.test('has accessToken', function () { pm.expect(json.token.accessToken).to.be.a('string').and.not.empty; });",
+              "pm.environment.set('token', json.token.accessToken);",
+              "pm.environment.set('userId', json.user.id);",
+              "pm.environment.set('userRole', json.user.role);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth / Me",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": "{{baseUrl}}/api/v1/auth/me"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+              "const json = pm.response.json();",
+              "pm.test('user.id matches env', function () { pm.expect(json.user.id).to.eql(pm.environment.get('userId')); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Routes / Discover Routes",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": "{{baseUrl}}/api/v1/discover/routes"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+              "const json = pm.response.json();",
+              "pm.test('routes is array', function () { pm.expect(json.routes).to.be.an('array'); });",
+              "if (Array.isArray(json.routes) && json.routes.length > 0) {",
+              "  const first = json.routes[0];",
+              "  if (first && first.driver && first.driver.id) pm.environment.set('driverId', first.driver.id);",
+              "  if (first && first.route) {",
+              "    if (first.route.id) pm.environment.set('routeId', first.route.id);",
+              "    if (first.route.from) pm.environment.set('routeFrom', first.route.from);",
+              "    if (first.route.to) pm.environment.set('routeTo', first.route.to);",
+              "    if (Array.isArray(first.route.midpoints)) pm.environment.set('routeMidpoints', JSON.stringify(first.route.midpoints));",
+              "  }",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Routes / Save Route",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"userId\": \"{{userId}}\",\n  \"route\": {\n    \"id\": \"{{saveRouteId}}\",\n    \"from\": \"A\",\n    \"to\": \"B\",\n    \"midpoints\": [\"C\"],\n    \"extraField\": 123\n  }\n}\n"
+        },
+        "url": "{{baseUrl}}/api/v1/routes"
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.environment.set('saveRouteId', 'route-saved-' + Date.now());"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 201', function () { pm.response.to.have.status(201); });",
+              "const json = pm.response.json();",
+              "pm.test('route id matches', function () { pm.expect(json.route.id).to.eql(pm.environment.get('saveRouteId')); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Routes / List Saved Routes",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": "{{baseUrl}}/api/v1/routes?userId={{userId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+              "const json = pm.response.json();",
+              "pm.test('routes is array', function () { pm.expect(json.routes).to.be.an('array'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Trips / Create Trip",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"passengerId\": \"{{userId}}\",\n  \"driverId\": \"{{driverId}}\",\n  \"route\": {\n    \"id\": \"{{routeId}}\",\n    \"from\": \"{{routeFrom}}\",\n    \"to\": \"{{routeTo}}\",\n    \"midpoints\": {{routeMidpoints}},\n    \"extraField\": \"ignored\"\n  },\n  \"extraRootField\": true\n}\n"
+        },
+        "url": "{{baseUrl}}/api/v1/trips"
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (!pm.environment.get('driverId')) pm.environment.set('driverId', 'driver-demo-001');",
+              "if (!pm.environment.get('routeId')) pm.environment.set('routeId', 'route-demo-001');",
+              "if (!pm.environment.get('routeFrom')) pm.environment.set('routeFrom', 'Sukhbaatar Square');",
+              "if (!pm.environment.get('routeTo')) pm.environment.set('routeTo', 'Zaisan Hill');",
+              "if (!pm.environment.get('routeMidpoints')) pm.environment.set('routeMidpoints', JSON.stringify(['National Amusement Park']));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 201', function () { pm.response.to.have.status(201); });",
+              "const json = pm.response.json();",
+              "pm.test('has trip id', function () { pm.expect(json.trip.id).to.be.a('string').and.not.empty; });",
+              "pm.environment.set('tripId', json.trip.id);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Trips / List Trips",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": "{{baseUrl}}/api/v1/trips?userId={{userId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+              "const json = pm.response.json();",
+              "pm.test('trips is array', function () { pm.expect(json.trips).to.be.an('array'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Trips / Update Trip Status",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"accepted\",\n  \"extraField\": \"ignored\"\n}\n"
+        },
+        "url": "{{baseUrl}}/api/v1/trips/{{tripId}}/status"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+              "const json = pm.response.json();",
+              "pm.test('status updated', function () { pm.expect(json.trip.status).to.eql('accepted'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Chat / Send Message (Trip)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"senderId\": \"{{userId}}\",\n  \"message\": \"Postman test message\",\n  \"extraField\": \"ignored\"\n}\n"
+        },
+        "url": "{{baseUrl}}/api/v1/chat/{{tripId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 201', function () { pm.response.to.have.status(201); });",
+              "const json = pm.response.json();",
+              "pm.test('message created', function () { pm.expect(json.message.id).to.be.a('string').and.not.empty; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Chat / List Messages (Trip)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": "{{baseUrl}}/api/v1/chat/{{tripId}}"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+              "const json = pm.response.json();",
+              "pm.test('messages is array', function () { pm.expect(json.messages).to.be.an('array'); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Driver / Login (Driver - seeded)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{driverEmail}}\",\n  \"password\": \"{{driverPassword}}\",\n  \"extraField\": \"this should be ignored\"\n}\n"
+        },
+        "url": "{{baseUrl}}/api/v1/auth/login"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+              "const json = pm.response.json();",
+              "pm.environment.set('token', json.token.accessToken);",
+              "pm.environment.set('userId', json.user.id);",
+              "pm.environment.set('userRole', json.user.role);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Driver / Update Location (PUT)",
+      "request": {
+        "method": "PUT",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"latitude\": 47.9000,\n  \"longitude\": 106.9000,\n  \"heading\": 123,\n  \"extraField\": \"ignored\"\n}\n"
+        },
+        "url": "{{baseUrl}}/api/v1/drivers/{{userId}}/location"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', function () { pm.response.to.have.status(200); });",
+              "const json = pm.response.json();",
+              "pm.test('driverId matches', function () { pm.expect(json.location.driverId).to.eql(pm.environment.get('userId')); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Driver / Get Location (GET)",
+      "request": {
+        "method": "GET",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "url": "{{baseUrl}}/api/v1/drivers/{{userId}}/location"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('status 200', function () { pm.response.to.have.status(200); });"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}
+

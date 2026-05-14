@@ -1,21 +1,36 @@
 import 'package:flutter/material.dart';
 
+import '../../system/localization/app_language_controller.dart';
+import '../../system/localization/app_localizations.dart';
+import '../../system/widgets/language_menu_button.dart';
+
 class RoleSelectionScreen extends StatelessWidget {
   final void Function(String role)? onSelectRole; // 'passenger' | 'driver'
+  final AppLanguageController? languageController;
 
   const RoleSelectionScreen({
-    super.key, this.onSelectRole,
+    super.key, this.onSelectRole, this.languageController,
   });
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
+    final controller = languageController ?? AppLanguageController();
     return Scaffold(
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(16),
           child: Column(
             children: [
-              const SizedBox(height: 8),
+              Row(
+                children: [
+                  const Spacer(),
+                  if (languageController != null)
+                    LanguageMenuButton(controller: languageController!),
+                  if (languageController == null)
+                    LanguageMenuButton(controller: controller),
+                ],
+              ),
               Expanded(
                 child: Center(
                   child: SingleChildScrollView(
@@ -37,14 +52,14 @@ class RoleSelectionScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 14),
                         Text(
-                          'Welcome aboard or back',
+                          l10n.text('welcomeAboard'),
                           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                                 fontWeight: FontWeight.bold,
                               ),
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          'To sign up or log in, enter your number.',
+                          l10n.text('enterNumberPrompt'),
                           textAlign: TextAlign.center,
                           style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                 color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -53,16 +68,16 @@ class RoleSelectionScreen extends StatelessWidget {
                         const SizedBox(height: 26),
                         _RoleButton(
                           icon: Icons.person,
-                          title: "I'm a Passenger",
-                          subtitle: 'Find rides & share trips',
+                          title: l10n.text('passengerTitle'),
+                          subtitle: l10n.text('passengerSubtitle'),
                           isPassenger: true,
                           onTap: () => onSelectRole?.call('passenger'),
                         ),
                         const SizedBox(height: 12),
                         _RoleButton(
                           icon: Icons.directions_car,
-                          title: "I'm a Driver",
-                          subtitle: 'Offer rides & earn money',
+                          title: l10n.text('driverTitle'),
+                          subtitle: l10n.text('driverSubtitle'),
                           isPassenger: false,
                           onTap: () => onSelectRole?.call('driver'),
                         ),
@@ -73,7 +88,7 @@ class RoleSelectionScreen extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'By continuing, you agree to our Terms of Service and Privacy Policy',
+                l10n.text('termsNotice'),
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,

@@ -2,14 +2,20 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
+import '../../system/localization/app_language_controller.dart';
+import '../../system/localization/app_localizations.dart';
+import '../../system/widgets/language_menu_button.dart';
+
 class SplashScreen extends StatefulWidget {
   final VoidCallback? onComplete;
   final int durationMs;
+  final AppLanguageController? languageController;
 
   const SplashScreen({
     super.key,
     this.onComplete,
     this.durationMs = 2500,
+    this.languageController,
   });
 
   @override
@@ -45,10 +51,20 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final l10n = context.l10n;
     return Scaffold(
       backgroundColor: scheme.primaryContainer,
       body: Stack(
         children: [
+          if (widget.languageController != null)
+            Positioned(
+              top: 44,
+              right: 12,
+              child: LanguageMenuButton(
+                controller: widget.languageController!,
+                color: scheme.onPrimary,
+              ),
+            ),
           // Expanding background blobs (rough equivalent of your React animation)
           Center(
             child: Stack(
@@ -120,7 +136,7 @@ class _SplashScreenState extends State<SplashScreen> {
                       ),
                       const SizedBox(height: 12),
                       Text(
-                        'RidePool',
+                        l10n.text('appName'),
                         style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                               fontWeight: FontWeight.w900,
                               color: scheme.onPrimary,
@@ -128,7 +144,7 @@ class _SplashScreenState extends State<SplashScreen> {
                       ),
                       const SizedBox(height: 6),
                       Text(
-                        'Share rides, save money',
+                        l10n.text('appTagline'),
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                               color: scheme.onPrimary.withOpacity(0.75),
                               fontWeight: FontWeight.w600,

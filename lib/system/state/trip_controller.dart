@@ -1,23 +1,23 @@
 import '../models/trip_model.dart';
 import '../services/maps_service.dart';
-import '../services/supabase_service.dart';
+import '../services/backend_api_service.dart';
 
 class TripController {
-  final SupabaseService _supabase;
+  final BackendApiService _api;
   final MapsService _maps;
 
   TripController({
-    SupabaseService? supabase,
+    BackendApiService? api,
     MapsService? maps,
-  })  : _supabase = supabase ?? const SupabaseService(),
+  })  : _api = api ?? BackendApiService(),
         _maps = maps ?? const MapsService();
 
   Future<List<TripModel>> getTrips(String userId) {
-    return _supabase.getTripsForUser(userId);
+    return _api.getTripsForUser(userId);
   }
 
   Future<void> markCompleted({required String tripId}) async {
-    await _supabase.updateTripStatus(tripId: tripId, status: 'completed');
+    await _api.updateTripStatus(tripId: tripId, status: 'completed');
   }
 
   /// Placeholder for updating a driver's live location for the trip.
@@ -39,4 +39,3 @@ class TripController {
     return _maps.getRoutePolyline(from: from, to: to);
   }
 }
-

@@ -1,113 +1,132 @@
 import 'package:flutter/material.dart';
 
-class _RouteTemplate {
-  final String templateId;
-  final String name;
-  final bool isRoundTrip;
-  final String? returnTime;
-  final String origin;
-  final String destination;
-  final List<String> stops;
-  final String departureTime;
-  final List<String> days;
-  final int seats;
-  final int pricePerSeat;
-  final bool isActive;
-
-  const _RouteTemplate({
-    required this.templateId,
-    required this.name,
-    required this.isRoundTrip,
-    this.returnTime,
-    required this.origin,
-    required this.destination,
-    required this.stops,
-    required this.departureTime,
-    required this.days,
-    required this.seats,
-    required this.pricePerSeat,
-    required this.isActive,
-  });
-}
-
-class _UpcomingBooking {
-  final String id;
-  final String name;
-  final String pickup;
-  final int seats;
-  final String time;
-
-  const _UpcomingBooking({
-    required this.id,
-    required this.name,
-    required this.pickup,
-    required this.seats,
-    required this.time,
-  });
-}
+import '../../system/models/route_model.dart';
+import '../../system/models/trip_model.dart';
+import '../../system/state/auth_controller.dart';
+import '../../system/state/driver_controller.dart';
 
 class RouteDetailScreen extends StatefulWidget {
-  final _RouteTemplate route;
+  final RouteModel? route;
   final VoidCallback? onBack;
   final VoidCallback? onEdit;
   final VoidCallback? onStartRide;
 
-  static const _sampleRoute = _RouteTemplate(
-    templateId: 'sample',
-    name: 'Daily Office Commute',
-    isRoundTrip: true,
-    returnTime: '18:00',
-    origin: 'Salt Lake Sector V',
-    destination: 'Park Street',
-    stops: ['Karunamoyee', 'Rabindra Sadan'],
-    departureTime: '08:30',
-    days: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'],
-    seats: 3,
-    pricePerSeat: 60,
-    isActive: true,
-  );
-
   const RouteDetailScreen({
     super.key,
-    _RouteTemplate? route,
+    this.route,
     this.onBack,
     this.onEdit,
     this.onStartRide,
-  }) : route = route ?? _sampleRoute;
+  });
 
   @override
   State<RouteDetailScreen> createState() => _RouteDetailScreenState();
 }
 
 class _RouteDetailScreenState extends State<RouteDetailScreen> {
-  late bool isActive;
+  final _authController = AuthController();
+  final _driverController = DriverController();
 
-  static const upcomingBookings = [
-    _UpcomingBooking(id: '1', name: 'Priya Sharma', pickup: 'Karunamoyee', seats: 1, time: '08:30'),
-    _UpcomingBooking(id: '2', name: 'Rahul Das', pickup: 'Salt Lake Sector V', seats: 2, time: '08:30'),
-  ];
-
-  static const routeStats = {
-    'totalTrips': 48,
-    'totalEarnings': 8640,
-    'avgRating': 4.9,
-    'completionRate': 98,
-  };
+  RouteModel? _route;
+  List<TripModel> _routeTrips = const [];
+  bool _isLoading = true;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    isActive = widget.route.isActive;
+    _loadRoute();
+  }
+
+  Future<void> _loadRoute() async {
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final user = await _authController.getCurrentUser();
+      if (user == null) {
+        throw Exception('Please sign in again.');
+      }
+
+      final routes = await _driverController.getSavedRoutes(user.id);
+      final route = widget.route ?? (routes.isNotEmpty ? routes.first : null);
+      if (route == null) {
+        throw Exception('No saved route found for this driver.');
+      }
+
+      final trips = await _driverController.getDriverTrips(user.id);
+      final routeTrips = trips.where((trip) => trip.route?.id == route.id).toList();
+
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _route = route;
+        _routeTrips = routeTrips;
+        _isLoading = false;
+      });
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _error = error.toString().replaceFirst('Exception: ', '');
+        _isLoading = false;
+      });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final route = widget.route;
+    if (_isLoading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_error != null) {
+      return Scaffold(
+        appBar: AppBar(
+          leading: IconButton(
+            onPressed: widget.onBack ?? () => Navigator.of(context).pop(),
+            icon: const Icon(Icons.arrow_back),
+          ),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.alt_route, size: 56, color: Colors.redAccent),
+                const SizedBox(height: 12),
+                Text(
+                  _error!,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                const SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: _loadRoute,
+                  child: const Text('Try Again'),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    final route = _route!;
+    final completedTrips = _routeTrips.where((trip) => trip.status == 'completed').length;
+    final activeTrips = _routeTrips.where((trip) => trip.status == 'active' || trip.status == 'accepted').length;
+
     return Scaffold(
       body: SafeArea(
         child: Column(
           children: [
-            // Header hero
             SizedBox(
               height: 240,
               child: Stack(
@@ -115,10 +134,33 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
                   Positioned.fill(
                     child: Container(
                       decoration: const BoxDecoration(color: Color(0xFFE5E7EB)),
-                      child: Center(
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 24),
-                          child: const Text('Route map preview'),
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.map_outlined, size: 44, color: Colors.indigo),
+                            const SizedBox(height: 12),
+                            Text(
+                              '${route.from} to ${route.to}',
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 20,
+                              ),
+                            ),
+                            if (route.midpoints.isNotEmpty) ...[
+                              const SizedBox(height: 12),
+                              Text(
+                                route.midpoints.join(' • '),
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  color: Colors.black54,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
                       ),
                     ),
@@ -130,7 +172,7 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
                     child: Row(
                       children: [
                         IconButton(
-                          onPressed: widget.onBack,
+                          onPressed: widget.onBack ?? () => Navigator.of(context).pop(),
                           icon: const Icon(Icons.arrow_back),
                           style: IconButton.styleFrom(
                             backgroundColor: Colors.white.withOpacity(0.75),
@@ -138,26 +180,13 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
                           ),
                         ),
                         const Spacer(),
-                        Row(
-                          children: [
-                            IconButton(
-                              onPressed: () {},
-                              icon: const Icon(Icons.share),
-                              style: IconButton.styleFrom(
-                                backgroundColor: Colors.white.withOpacity(0.75),
-                                shape: const CircleBorder(),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            IconButton(
-                              onPressed: widget.onEdit,
-                              icon: const Icon(Icons.edit),
-                              style: IconButton.styleFrom(
-                                backgroundColor: Colors.white.withOpacity(0.75),
-                                shape: const CircleBorder(),
-                              ),
-                            ),
-                          ],
+                        IconButton(
+                          onPressed: widget.onEdit,
+                          icon: const Icon(Icons.edit),
+                          style: IconButton.styleFrom(
+                            backgroundColor: Colors.white.withOpacity(0.75),
+                            shape: const CircleBorder(),
+                          ),
                         ),
                       ],
                     ),
@@ -168,14 +197,14 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
-                        color: isActive ? Colors.green.withOpacity(0.15) : Colors.grey.withOpacity(0.18),
+                        color: Colors.green.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(999),
                       ),
                       child: Text(
-                        isActive ? '● Active' : '○ Offline',
+                        '● ${activeTrips > 0 ? 'In use' : 'Saved'}',
                         style: TextStyle(
                           fontWeight: FontWeight.w900,
-                          color: isActive ? Colors.green.shade700 : Colors.black54,
+                          color: Colors.green.shade700,
                         ),
                       ),
                     ),
@@ -183,12 +212,10 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
                 ],
               ),
             ),
-
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 children: [
-                  const SizedBox(height: 0),
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -199,53 +226,11 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    route.name,
-                                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                                          fontWeight: FontWeight.w900,
-                                        ),
-                                  ),
-                                  if (route.isRoundTrip)
-                                    const SizedBox(height: 10),
-                                  if (route.isRoundTrip)
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                      decoration: BoxDecoration(
-                                        color: Colors.indigo.withOpacity(0.10),
-                                        borderRadius: BorderRadius.circular(999),
-                                      ),
-                                      child: const Text(
-                                        'Round Trip',
-                                        style: TextStyle(
-                                          color: Colors.indigo,
-                                          fontWeight: FontWeight.w800,
-                                          fontSize: 12,
-                                        ),
-                                      ),
-                                    ),
-                                ],
+                        Text(
+                          '${route.from} to ${route.to}',
+                          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                                fontWeight: FontWeight.w900,
                               ),
-                            ),
-                            const SizedBox(width: 10),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                Text(
-                                  '₹${route.pricePerSeat}',
-                                  style: const TextStyle(fontSize: 28, fontWeight: FontWeight.w900, color: Colors.indigo),
-                                ),
-                                const SizedBox(height: 6),
-                                const Text('per seat', style: TextStyle(color: Colors.black54, fontSize: 12, fontWeight: FontWeight.w700)),
-                              ],
-                            ),
-                          ],
                         ),
                         const SizedBox(height: 16),
                         Row(
@@ -255,11 +240,7 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
                               children: [
                                 const CircleAvatar(radius: 6, backgroundColor: Colors.indigo),
                                 Container(width: 3, height: 48, color: Colors.grey.shade400),
-                                const CircleAvatar(
-                                  radius: 6,
-                                  backgroundColor: Colors.white,
-                                  child: Icon(Icons.circle, size: 0),
-                                ),
+                                const CircleAvatar(radius: 6, backgroundColor: Colors.red),
                               ],
                             ),
                             const SizedBox(width: 14),
@@ -269,208 +250,102 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
                                 children: [
                                   const Text('Pickup', style: TextStyle(color: Colors.black54, fontSize: 12, fontWeight: FontWeight.w800)),
                                   const SizedBox(height: 6),
-                                  Text(route.origin, style: const TextStyle(fontWeight: FontWeight.w800)),
+                                  Text(route.from, style: const TextStyle(fontWeight: FontWeight.w800)),
                                   const SizedBox(height: 14),
-                                  if (route.stops.isNotEmpty) ...[
-                                    for (int i = 0; i < route.stops.length; i++) ...[
-                                      Text('Stop ${i + 1}', style: const TextStyle(color: Colors.black54, fontSize: 12, fontWeight: FontWeight.w800)),
+                                  if (route.midpoints.isNotEmpty) ...[
+                                    for (int index = 0; index < route.midpoints.length; index++) ...[
+                                      Text('Midpoint ${index + 1}', style: const TextStyle(color: Colors.black54, fontSize: 12, fontWeight: FontWeight.w800)),
                                       const SizedBox(height: 6),
-                                      Text(route.stops[i], style: const TextStyle(fontWeight: FontWeight.w700)),
+                                      Text(route.midpoints[index], style: const TextStyle(fontWeight: FontWeight.w700)),
                                       const SizedBox(height: 14),
-                                    ]
+                                    ],
                                   ],
-                                  Text('Drop-off', style: const TextStyle(color: Colors.black54, fontSize: 12, fontWeight: FontWeight.w800)),
+                                  const Text('Drop-off', style: TextStyle(color: Colors.black54, fontSize: 12, fontWeight: FontWeight.w800)),
                                   const SizedBox(height: 6),
-                                  Text(route.destination, style: const TextStyle(fontWeight: FontWeight.w800)),
+                                  Text(route.to, style: const TextStyle(fontWeight: FontWeight.w800)),
                                 ],
                               ),
                             ),
                           ],
                         ),
-                        const SizedBox(height: 14),
-                        const Divider(height: 1),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            const Icon(Icons.access_time, size: 16, color: Colors.indigo),
-                            const SizedBox(width: 6),
-                            Text(route.departureTime),
-                            if (route.isRoundTrip && route.returnTime != null) ...[
-                              const SizedBox(width: 10),
-                              Text('/ ${route.returnTime}', style: const TextStyle(color: Colors.black54)),
-                            ],
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            const Icon(Icons.calendar_month, size: 16, color: Colors.indigo),
-                            const SizedBox(width: 6),
-                            Text(route.days.join(', ')),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            const Icon(Icons.people, size: 16, color: Colors.indigo),
-                            const SizedBox(width: 6),
-                            Text('${route.seats} seats'),
-                          ],
-                        ),
                       ],
                     ),
                   ),
-
-                  const SizedBox(height: 16),
-                  GridView.count(
-                    crossAxisCount: 2,
-                    shrinkWrap: true,
-                    physics: const NeverScrollableScrollPhysics(),
-                    childAspectRatio: 1.25,
+                  const SizedBox(height: 14),
+                  Wrap(
+                    spacing: 12,
+                    runSpacing: 12,
                     children: [
-                      _MetricCard(
-                        icon: Icons.trending_up,
-                        label: 'Total Trips',
-                        value: '${routeStats['totalTrips']}',
-                      ),
-                      _MetricCard(
-                        icon: Icons.attach_money,
-                        label: 'Earnings',
-                        value: '₹${routeStats['totalEarnings']}',
-                      ),
-                      _MetricCard(
-                        icon: Icons.star,
-                        label: 'Avg Rating',
-                        value: '${routeStats['avgRating']}',
-                      ),
-                      _MetricCard(
-                        icon: Icons.navigation,
-                        label: 'Completion',
-                        value: '${routeStats['completionRate']}%',
-                      ),
+                      _StatTile(label: 'Trips', value: '${_routeTrips.length}', icon: Icons.alt_route),
+                      _StatTile(label: 'Completed', value: '$completedTrips', icon: Icons.check_circle_outline),
+                      _StatTile(label: 'Active', value: '$activeTrips', icon: Icons.local_taxi_outlined),
+                      _StatTile(label: 'Midpoints', value: '${route.midpoints.length}', icon: Icons.more_horiz),
                     ],
                   ),
-
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 14),
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
                       color: Colors.white,
-                      borderRadius: BorderRadius.circular(26),
+                      borderRadius: BorderRadius.circular(22),
                       border: Border.all(color: Colors.grey.shade200),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Text('Today\'s Bookings',
-                            style: TextStyle(fontWeight: FontWeight.w900)),
-                        const SizedBox(height: 12),
-                        ...upcomingBookings.map((b) {
-                          return Container(
-                            padding: const EdgeInsets.symmetric(vertical: 10),
-                            decoration: BoxDecoration(
-                              border: Border(
-                                bottom: BorderSide(color: Colors.grey.shade200),
+                        const Text('Recent Trips On This Route', style: TextStyle(fontWeight: FontWeight.w900)),
+                        const SizedBox(height: 10),
+                        if (_routeTrips.isEmpty)
+                          const Text(
+                            'No trips have been recorded for this route yet.',
+                            style: TextStyle(color: Colors.black54, fontWeight: FontWeight.w700),
+                          )
+                        else
+                          ..._routeTrips.take(6).map((trip) {
+                            return ListTile(
+                              contentPadding: EdgeInsets.zero,
+                              leading: CircleAvatar(
+                                backgroundColor: Colors.indigo.withOpacity(0.10),
+                                child: const Icon(Icons.route, color: Colors.indigo),
                               ),
-                            ),
-                            child: Row(
-                              children: [
-                                CircleAvatar(
-                                  radius: 18,
-                                  backgroundColor: Colors.indigo.withOpacity(0.10),
-                                  child: Text(b.name[0], style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.indigo)),
-                                ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(b.name, style: const TextStyle(fontWeight: FontWeight.w900)),
-                                      const SizedBox(height: 4),
-                                      Row(
-                                        children: [
-                                          const Icon(Icons.place, size: 14, color: Colors.black54),
-                                          const SizedBox(width: 6),
-                                          Text(b.pickup, style: const TextStyle(color: Colors.black54, fontWeight: FontWeight.w700)),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Text(
-                                      '${b.seats} ${b.seats > 1 ? 'seats' : 'seat'}',
-                                      style: const TextStyle(fontWeight: FontWeight.w900),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      b.time,
-                                      style: const TextStyle(color: Colors.black54, fontSize: 12, fontWeight: FontWeight.w700),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          );
-                        }).toList(),
+                              title: Text(
+                                trip.status.toUpperCase(),
+                                style: const TextStyle(fontWeight: FontWeight.w900),
+                              ),
+                              subtitle: Text(
+                                '${trip.createdAt.toLocal()}'.split('.').first,
+                                style: const TextStyle(fontWeight: FontWeight.w700),
+                              ),
+                            );
+                          }),
                       ],
                     ),
                   ),
                 ],
               ),
             ),
-
-            // Bottom actions
             Container(
               padding: const EdgeInsets.fromLTRB(16, 10, 16, 16),
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.96),
+                color: Colors.white.withOpacity(0.98),
                 border: Border(top: BorderSide(color: Colors.grey.shade200)),
               ),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => setState(() => isActive = !isActive),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        side: BorderSide(
-                          color: isActive ? Colors.red.withOpacity(0.35) : Colors.green.withOpacity(0.35),
-                        ),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(isActive ? Icons.pause_circle : Icons.play_circle,
-                              color: isActive ? Colors.red : Colors.green),
-                          const SizedBox(width: 8),
-                          Text(isActive ? 'Pause Route' : 'Activate Route',
-                              style: TextStyle(
-                                fontWeight: FontWeight.w800,
-                                color: isActive ? Colors.red : Colors.green,
-                              )),
-                        ],
-                      ),
-                    ),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: widget.onStartRide,
+                  icon: const Icon(Icons.navigation),
+                  label: const Text(
+                    'Start Ride',
+                    style: TextStyle(fontWeight: FontWeight.w900),
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: widget.onStartRide,
-                      icon: const Icon(Icons.navigation),
-                      label: const Text('Start Ride', style: TextStyle(fontWeight: FontWeight.w900)),
-                      style: ElevatedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        backgroundColor: Colors.indigo,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      ),
-                    ),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    backgroundColor: Colors.indigo,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                   ),
-                ],
+                ),
               ),
             ),
           ],
@@ -480,39 +355,44 @@ class _RouteDetailScreenState extends State<RouteDetailScreen> {
   }
 }
 
-class _MetricCard extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-
-  const _MetricCard({
-    required this.icon,
+class _StatTile extends StatelessWidget {
+  const _StatTile({
     required this.label,
     required this.value,
+    required this.icon,
   });
+
+  final String label;
+  final String value;
+  final IconData icon;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(icon, size: 16, color: Colors.indigo),
-              const SizedBox(width: 8),
-              Text(label, style: const TextStyle(color: Colors.black54, fontWeight: FontWeight.w700, fontSize: 12)),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Text(value, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900)),
-        ],
+    return SizedBox(
+      width: 160,
+      child: Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: Colors.indigo),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(label, style: const TextStyle(color: Colors.black54, fontWeight: FontWeight.w700)),
+                  const SizedBox(height: 4),
+                  Text(value, style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

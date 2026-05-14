@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 
+import '../../system/localization/app_localizations.dart';
+import '../../system/models/route_model.dart';
+import '../../system/models/trip_model.dart';
+import '../../system/state/auth_controller.dart';
+import '../../system/state/passenger_controller.dart';
+
 class SearchLocationScreen extends StatefulWidget {
   final VoidCallback? onBack;
   final void Function(String pickup, String destination)? onSelectLocation;
 
-  const SearchLocationScreen({
-    super.key,
-    this.onBack,
-    this.onSelectLocation,
-  });
+  const SearchLocationScreen({super.key, this.onBack, this.onSelectLocation});
 
   @override
   State<SearchLocationScreen> createState() => _SearchLocationScreenState();
@@ -17,10 +19,20 @@ class SearchLocationScreen extends StatefulWidget {
 enum _FocusedField { pickup, destination }
 
 class _SearchLocationScreenState extends State<SearchLocationScreen> {
+  final _authController = AuthController();
+  final _passengerController = PassengerController();
   final pickupController = TextEditingController();
   final destinationController = TextEditingController();
 
   _FocusedField focused = _FocusedField.pickup;
+  List<RouteModel> _savedRoutes = const [];
+  List<TripModel> _recentTrips = const [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSuggestions();
+  }
 
   @override
   void dispose() {
@@ -29,16 +41,21 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
     super.dispose();
   }
 
-  final savedLocations = const [
-    {'name': 'Home', 'address': '45 Park Street, Kolkata'},
-    {'name': 'Office', 'address': 'Salt Lake Sector V, Block A'},
-  ];
-
-  final recentSearches = const [
-    {'name': 'The Royal Sweets Howrah Station', 'address': 'Near Howrah Station'},
-    {'name': 'Add Risheswar Rd', 'address': 'Rishra, West Bengal'},
-    {'name': 'HGM Residency Rd', 'address': 'Salt Lake, Kolkata'},
-  ];
+  Future<void> _loadSuggestions() async {
+    final user = await _authController.getCurrentUser();
+    if (user == null) {
+      return;
+    }
+    final savedRoutes = await _passengerController.getSavedRoutes(user.id);
+    final recentTrips = await _passengerController.getPassengerTrips(user.id);
+    if (!mounted) {
+      return;
+    }
+    setState(() {
+      _savedRoutes = savedRoutes;
+      _recentTrips = recentTrips;
+    });
+  }
 
   void handleLocationSelect(String location) {
     if (focused == _FocusedField.pickup) {
@@ -75,7 +92,8 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                   Row(
                     children: [
                       IconButton(
-                        onPressed: widget.onBack,
+                        onPressed:
+                            widget.onBack ?? () => Navigator.of(context).pop(),
                         icon: const Icon(Icons.arrow_back),
                         style: IconButton.styleFrom(
                           backgroundColor: Colors.grey.shade200,
@@ -86,13 +104,12 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                       Text(
                         'Plan your trip',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
-                  // Timeline-ish input
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -120,7 +137,10 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                             decoration: BoxDecoration(
                               shape: BoxShape.circle,
                               color: Colors.indigo.withOpacity(0.15),
-                              border: Border.all(color: Colors.indigo.withOpacity(0.35), width: 2),
+                              border: Border.all(
+                                color: Colors.indigo.withOpacity(0.35),
+                                width: 2,
+                              ),
                             ),
                           ),
                         ],
@@ -134,8 +154,11 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                               label: 'Pickup location',
                               placeholder: 'Pickup location',
                               isFocused: focused == _FocusedField.pickup,
-                              onFocus: () => setState(() => focused = _FocusedField.pickup),
-                              onClear: () => setState(() => pickupController.clear()),
+                              onFocus: () => setState(
+                                () => focused = _FocusedField.pickup,
+                              ),
+                              onClear: () =>
+                                  setState(() => pickupController.clear()),
                             ),
                             const SizedBox(height: 10),
                             _LocationInput(
@@ -143,8 +166,11 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                               label: 'Where to?',
                               placeholder: 'Where to?',
                               isFocused: focused == _FocusedField.destination,
-                              onFocus: () => setState(() => focused = _FocusedField.destination),
-                              onClear: () => setState(() => destinationController.clear()),
+                              onFocus: () => setState(
+                                () => focused = _FocusedField.destination,
+                              ),
+                              onClear: () =>
+                                  setState(() => destinationController.clear()),
                             ),
                           ],
                         ),
@@ -154,7 +180,6 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                 ],
               ),
             ),
-
             Expanded(
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
@@ -163,16 +188,22 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                   ElevatedButton.icon(
                     onPressed: () => handleLocationSelect('Current Location'),
                     icon: const Icon(Icons.navigation_outlined),
-                    label: Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    label: const Padding(
+                      padding: EdgeInsets.symmetric(vertical: 12),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text('Use current location', style: TextStyle(fontWeight: FontWeight.w700)),
+                        children: [
+                          Text(
+                            'Use current location',
+                            style: TextStyle(fontWeight: FontWeight.w700),
+                          ),
                           SizedBox(height: 2),
                           Text(
                             'Based on your GPS',
-                            style: TextStyle(color: Colors.black54, fontSize: 12),
+                            style: TextStyle(
+                              color: Colors.black54,
+                              fontSize: 12,
+                            ),
                           ),
                         ],
                       ),
@@ -180,77 +211,125 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.grey.shade100,
                       foregroundColor: Colors.black87,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                       elevation: 0,
                       alignment: Alignment.centerLeft,
                     ),
                   ),
-
                   const SizedBox(height: 20),
                   Text(
                     'Saved Places',
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.4,
-                          color: Colors.black54,
-                        ),
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.4,
+                      color: Colors.black54,
+                    ),
                   ),
                   const SizedBox(height: 10),
-                  ...savedLocations.map((loc) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        tileColor: Colors.grey.shade100,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        leading: CircleAvatar(
-                          radius: 18,
-                          backgroundColor: Colors.grey.shade200,
-                          child: Text(loc['name']!.substring(0, 1), style: const TextStyle(fontWeight: FontWeight.w900)),
+                  if (_savedRoutes.isEmpty)
+                    const Text(
+                      'No saved route places in backend yet.',
+                      style: TextStyle(color: Colors.black54),
+                    )
+                  else
+                    ..._savedRoutes.take(6).map((route) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          tileColor: Colors.grey.shade100,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          leading: CircleAvatar(
+                            radius: 18,
+                            backgroundColor: Colors.grey.shade200,
+                            child: Text(
+                              route.from.isNotEmpty
+                                  ? route.from[0].toUpperCase()
+                                  : '?',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                          title: Text(
+                            '${route.from} → ${route.to}',
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          subtitle: Text(
+                            route.midpoints.isEmpty
+                                ? 'Direct route'
+                                : route.midpoints.join(', '),
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.black54,
+                            ),
+                          ),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () => handleLocationSelect(route.to),
                         ),
-                        title: Text(loc['name']!, style: const TextStyle(fontWeight: FontWeight.w700)),
-                        subtitle: Text(loc['address']!, style: const TextStyle(fontSize: 12, color: Colors.black54)),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () => handleLocationSelect(loc['address']!),
-                      ),
-                    );
-                  }).toList(),
-
+                      );
+                    }),
                   const SizedBox(height: 18),
                   Text(
                     'Recent',
                     style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.4,
-                          color: Colors.black54,
-                        ),
+                      fontWeight: FontWeight.w800,
+                      letterSpacing: 0.4,
+                      color: Colors.black54,
+                    ),
                   ),
                   const SizedBox(height: 10),
-                  ...recentSearches.map((loc) {
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 8),
-                      child: ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        tileColor: Colors.grey.shade100,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                        leading: const CircleAvatar(
-                          radius: 18,
-                          backgroundColor: Colors.grey,
-                          child: Icon(Icons.access_time, size: 18, color: Colors.white),
+                  if (_recentTrips.isEmpty)
+                    const Text(
+                      'No recent trip locations in backend yet.',
+                      style: TextStyle(color: Colors.black54),
+                    )
+                  else
+                    ..._recentTrips.take(6).map((trip) {
+                      final name =
+                          '${trip.route?.from ?? 'Pickup'} → ${trip.route?.to ?? 'Destination'}';
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 8),
+                        child: ListTile(
+                          contentPadding: EdgeInsets.zero,
+                          tileColor: Colors.grey.shade100,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          leading: const CircleAvatar(
+                            radius: 18,
+                            backgroundColor: Colors.grey,
+                            child: Icon(
+                              Icons.access_time,
+                              size: 18,
+                              color: Colors.white,
+                            ),
+                          ),
+                          title: Text(
+                            name,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                          subtitle: Text(
+                            '${trip.createdAt.toLocal()}'.split('.').first,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Colors.black54,
+                            ),
+                          ),
+                          trailing: const Icon(Icons.chevron_right),
+                          onTap: () =>
+                              handleLocationSelect(trip.route?.to ?? ''),
                         ),
-                        title: Text(loc['name']!, style: const TextStyle(fontWeight: FontWeight.w700)),
-                        subtitle: Text(loc['address']!, style: const TextStyle(fontSize: 12, color: Colors.black54)),
-                        trailing: const Icon(Icons.chevron_right),
-                        onTap: () => handleLocationSelect(loc['name']!),
-                      ),
-                    );
-                  }).toList(),
-
+                      );
+                    }),
                   const SizedBox(height: 24),
                 ],
               ),
             ),
-
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -264,7 +343,7 @@ class _SearchLocationScreenState extends State<SearchLocationScreen> {
                   onPressed: canContinue
                       ? () => widget.onSelectLocation?.call(pickup, destination)
                       : null,
-                  child: const Text('Confirm & Request'),
+                  child: Text(context.l10n.text('confirmRequest')),
                 ),
               ),
             ),
@@ -310,10 +389,7 @@ class _LocationInput extends StatelessWidget {
           ),
         ),
         suffixIcon: controller.text.isNotEmpty
-            ? IconButton(
-                onPressed: onClear,
-                icon: const Icon(Icons.close),
-              )
+            ? IconButton(onPressed: onClear, icon: const Icon(Icons.close))
             : null,
       ),
       textInputAction: TextInputAction.next,

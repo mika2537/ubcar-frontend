@@ -1,6 +1,8 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 
+import '../localization/app_localizations.dart';
+
 class BottomNav extends StatelessWidget {
   final int currentIndex;
   final void Function(int index) onTap;
@@ -13,6 +15,7 @@ class BottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     // BackdropFilter creates the blur effect
     return ClipRRect(
       child: BackdropFilter(
@@ -30,11 +33,11 @@ class BottomNav extends StatelessWidget {
             elevation: 0,
             selectedItemColor: Colors.indigo,
             unselectedItemColor: Colors.black45,
-            items: const [
-              BottomNavigationBarItem(icon: Icon(Icons.home_filled), label: 'Home'),
-              BottomNavigationBarItem(icon: Icon(Icons.access_time), label: 'Trips'),
-              BottomNavigationBarItem(icon: Icon(Icons.account_balance_wallet), label: 'Wallet'),
-              BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+            items: [
+              BottomNavigationBarItem(icon: const Icon(Icons.home_filled), label: l10n.text('home')),
+              BottomNavigationBarItem(icon: const Icon(Icons.access_time), label: l10n.text('trips')),
+              BottomNavigationBarItem(icon: const Icon(Icons.account_balance_wallet), label: l10n.text('wallet')),
+              BottomNavigationBarItem(icon: const Icon(Icons.person), label: l10n.text('profile')),
             ],
           ),
         ),

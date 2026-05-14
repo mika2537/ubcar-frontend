@@ -1,8 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import '../../system/localization/app_localizations.dart';
 
 enum _DocumentType { license, registration, photo, insurance }
+
 enum _DocumentStatus { pending, uploaded, verified, rejected }
 
 class _Document {
@@ -25,11 +27,7 @@ class DriverDocumentScreen extends StatefulWidget {
   final VoidCallback? onBack;
   final VoidCallback? onComplete;
 
-  const DriverDocumentScreen({
-    super.key,
-    this.onBack,
-    this.onComplete,
-  });
+  const DriverDocumentScreen({super.key, this.onBack, this.onComplete});
 
   @override
   State<DriverDocumentScreen> createState() => _DriverDocumentScreenState();
@@ -71,8 +69,10 @@ class _DriverDocumentScreenState extends State<DriverDocumentScreen> {
     ];
   }
 
-  bool get allUploaded => documents.every((d) => d.status != _DocumentStatus.pending);
-  int get uploadedCount => documents.where((d) => d.status != _DocumentStatus.pending).length;
+  bool get allUploaded =>
+      documents.every((d) => d.status != _DocumentStatus.pending);
+  int get uploadedCount =>
+      documents.where((d) => d.status != _DocumentStatus.pending).length;
 
   Color _badgeBg(_DocumentStatus status) {
     switch (status) {
@@ -178,13 +178,22 @@ class _DriverDocumentScreenState extends State<DriverDocumentScreen> {
                       Expanded(
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
-                          children: const [
+                          children: [
                             Text(
                               'Document Verification',
-                              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+                              style: TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.w900,
+                              ),
                             ),
                             SizedBox(height: 6),
-                            Text('Upload required documents', style: TextStyle(color: Colors.black54, fontWeight: FontWeight.w700)),
+                            Text(
+                              context.l10n.text('uploadRequiredDocuments'),
+                              style: TextStyle(
+                                color: Colors.black54,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
                           ],
                         ),
                       ),
@@ -208,12 +217,18 @@ class _DriverDocumentScreenState extends State<DriverDocumentScreen> {
                           children: [
                             const Text(
                               'Verification Progress',
-                              style: TextStyle(fontWeight: FontWeight.w800, color: Colors.black54),
+                              style: TextStyle(
+                                fontWeight: FontWeight.w800,
+                                color: Colors.black54,
+                              ),
                             ),
                             const Spacer(),
                             Text(
                               '$uploadedCount/${documents.length}',
-                              style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.indigo),
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w900,
+                                color: Colors.indigo,
+                              ),
                             ),
                           ],
                         ),
@@ -224,7 +239,9 @@ class _DriverDocumentScreenState extends State<DriverDocumentScreen> {
                             value: uploadedCount / documents.length,
                             minHeight: 8,
                             backgroundColor: Colors.grey.shade200,
-                            valueColor: const AlwaysStoppedAnimation<Color>(Colors.indigo),
+                            valueColor: const AlwaysStoppedAnimation<Color>(
+                              Colors.indigo,
+                            ),
                           ),
                         ),
                       ],
@@ -254,28 +271,42 @@ class _DriverDocumentScreenState extends State<DriverDocumentScreen> {
                               color: doc.status == _DocumentStatus.verified
                                   ? Colors.green.withOpacity(0.12)
                                   : doc.status == _DocumentStatus.uploaded
-                                      ? Colors.orange.withOpacity(0.12)
-                                      : doc.status == _DocumentStatus.rejected
-                                          ? Colors.red.withOpacity(0.12)
-                                          : Colors.indigo.withOpacity(0.10),
+                                  ? Colors.orange.withOpacity(0.12)
+                                  : doc.status == _DocumentStatus.rejected
+                                  ? Colors.red.withOpacity(0.12)
+                                  : Colors.indigo.withOpacity(0.10),
                               borderRadius: BorderRadius.circular(16),
                             ),
-                            child: Icon(_docIcon(doc.id),
-                                color: doc.status == _DocumentStatus.verified
-                                    ? Colors.green
-                                    : doc.status == _DocumentStatus.uploaded
-                                        ? Colors.orange.shade800
-                                        : doc.status == _DocumentStatus.rejected
-                                            ? Colors.red.shade800
-                                            : Colors.indigo),
+                            child: Icon(
+                              _docIcon(doc.id),
+                              color: doc.status == _DocumentStatus.verified
+                                  ? Colors.green
+                                  : doc.status == _DocumentStatus.uploaded
+                                  ? Colors.orange.shade800
+                                  : doc.status == _DocumentStatus.rejected
+                                  ? Colors.red.shade800
+                                  : Colors.indigo,
+                            ),
                           ),
-                          title: Text(doc.title, style: const TextStyle(fontWeight: FontWeight.w900)),
-                          subtitle: Text(doc.description, style: const TextStyle(color: Colors.black54, fontWeight: FontWeight.w700)),
+                          title: Text(
+                            doc.title,
+                            style: const TextStyle(fontWeight: FontWeight.w900),
+                          ),
+                          subtitle: Text(
+                            doc.description,
+                            style: const TextStyle(
+                              color: Colors.black54,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 6,
+                                ),
                                 decoration: BoxDecoration(
                                   color: _badgeBg(doc.status),
                                   borderRadius: BorderRadius.circular(12),
@@ -308,12 +339,21 @@ class _DriverDocumentScreenState extends State<DriverDocumentScreen> {
                       onPressed: allUploaded ? widget.onComplete : null,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.indigo,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
-                        disabledBackgroundColor: Colors.indigo.withOpacity(0.35),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        disabledBackgroundColor: Colors.indigo.withOpacity(
+                          0.35,
+                        ),
                       ),
                       child: Text(
-                        allUploaded ? 'Submit for Review' : 'Upload All Documents',
-                        style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+                        allUploaded
+                            ? 'Submit for Review'
+                            : 'Upload All Documents',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.w900,
+                          fontSize: 16,
+                        ),
                       ),
                     ),
                   ),
@@ -339,7 +379,8 @@ class _DriverDocumentScreenState extends State<DriverDocumentScreen> {
                             child: Row(
                               children: [
                                 IconButton(
-                                  onPressed: () => setState(() => selectedDoc = null),
+                                  onPressed: () =>
+                                      setState(() => selectedDoc = null),
                                   icon: const Icon(Icons.close),
                                   style: IconButton.styleFrom(
                                     backgroundColor: Colors.grey.shade200,
@@ -350,7 +391,10 @@ class _DriverDocumentScreenState extends State<DriverDocumentScreen> {
                                 Expanded(
                                   child: Text(
                                     selected.title,
-                                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 18),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w900,
+                                      fontSize: 18,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -369,50 +413,102 @@ class _DriverDocumentScreenState extends State<DriverDocumentScreen> {
                                       decoration: BoxDecoration(
                                         borderRadius: BorderRadius.circular(26),
                                         border: Border.all(
-                                          color: isUploading ? Colors.indigo.withOpacity(0.75) : Colors.grey.shade300,
+                                          color: isUploading
+                                              ? Colors.indigo.withOpacity(0.75)
+                                              : Colors.grey.shade300,
                                           width: 2,
                                           style: BorderStyle.solid,
                                         ),
-                                        color: isUploading ? Colors.indigo.withOpacity(0.06) : Colors.grey.shade50,
+                                        color: isUploading
+                                            ? Colors.indigo.withOpacity(0.06)
+                                            : Colors.grey.shade50,
                                       ),
                                       child: Center(
                                         child: isUploading
                                             ? Column(
                                                 mainAxisSize: MainAxisSize.min,
-                                                children: const [
+                                                children: [
                                                   SizedBox(
                                                     width: 46,
                                                     height: 46,
-                                                    child: CircularProgressIndicator(strokeWidth: 3),
+                                                    child:
+                                                        CircularProgressIndicator(
+                                                          strokeWidth: 3,
+                                                        ),
                                                   ),
                                                   SizedBox(height: 12),
-                                                  Text('Uploading...', style: TextStyle(fontWeight: FontWeight.w900)),
+                                                  Text(
+                                                    context.l10n.text(
+                                                      'uploading',
+                                                    ),
+                                                    style: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.w900,
+                                                    ),
+                                                  ),
                                                 ],
                                               )
-                                            : selected.status != _DocumentStatus.pending
-                                                ? Column(
-                                                    mainAxisSize: MainAxisSize.min,
-                                                    children: [
-                                                      const Icon(Icons.check_circle, size: 56, color: Colors.green),
-                                                      const SizedBox(height: 10),
-                                                      const Text(
-                                                        'Document Uploaded',
-                                                        style: TextStyle(fontWeight: FontWeight.w900),
-                                                      ),
-                                                      const SizedBox(height: 6),
-                                                      Text(selected.file ?? 'document.pdf', style: TextStyle(color: Colors.black54, fontWeight: FontWeight.w700)),
-                                                    ],
-                                                  )
-                                                : Column(
-                                                    mainAxisSize: MainAxisSize.min,
-                                                    children: const [
-                                                      Icon(Icons.upload_file, size: 56, color: Colors.black45),
-                                                      SizedBox(height: 12),
-                                                      Text('Tap to upload', style: TextStyle(fontWeight: FontWeight.w900)),
-                                                      SizedBox(height: 6),
-                                                      Text('or drag and drop', style: TextStyle(color: Colors.black54, fontWeight: FontWeight.w700)),
-                                                    ],
+                                            : selected.status !=
+                                                  _DocumentStatus.pending
+                                            ? Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  const Icon(
+                                                    Icons.check_circle,
+                                                    size: 56,
+                                                    color: Colors.green,
                                                   ),
+                                                  const SizedBox(height: 10),
+                                                  const Text(
+                                                    'Document Uploaded',
+                                                    style: TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.w900,
+                                                    ),
+                                                  ),
+                                                  const SizedBox(height: 6),
+                                                  Text(
+                                                    selected.file ??
+                                                        'document.pdf',
+                                                    style: TextStyle(
+                                                      color: Colors.black54,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                    ),
+                                                  ),
+                                                ],
+                                              )
+                                            : Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  Icon(
+                                                    Icons.upload_file,
+                                                    size: 56,
+                                                    color: Colors.black45,
+                                                  ),
+                                                  SizedBox(height: 12),
+                                                  Text(
+                                                    context.l10n.text(
+                                                      'tapToUpload',
+                                                    ),
+                                                    style: const TextStyle(
+                                                      fontWeight:
+                                                          FontWeight.w900,
+                                                    ),
+                                                  ),
+                                                  SizedBox(height: 6),
+                                                  Text(
+                                                    context.l10n.text(
+                                                      'orDragAndDrop',
+                                                    ),
+                                                    style: const TextStyle(
+                                                      color: Colors.black54,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
                                       ),
                                     ),
                                   ),
@@ -427,11 +523,14 @@ class _DriverDocumentScreenState extends State<DriverDocumentScreen> {
                                       borderRadius: BorderRadius.circular(20),
                                     ),
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         const Text(
                                           'Guidelines',
-                                          style: TextStyle(fontWeight: FontWeight.w900),
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.w900,
+                                          ),
                                         ),
                                         const SizedBox(height: 10),
                                         ...const [
@@ -440,13 +539,29 @@ class _DriverDocumentScreenState extends State<DriverDocumentScreen> {
                                           'File size under 10MB (JPG, PNG, PDF)',
                                         ].map((t) {
                                           return Padding(
-                                            padding: const EdgeInsets.only(bottom: 8),
+                                            padding: const EdgeInsets.only(
+                                              bottom: 8,
+                                            ),
                                             child: Row(
-                                              crossAxisAlignment: CrossAxisAlignment.start,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
                                               children: [
-                                                const Icon(Icons.check, size: 16, color: Colors.green),
+                                                const Icon(
+                                                  Icons.check,
+                                                  size: 16,
+                                                  color: Colors.green,
+                                                ),
                                                 const SizedBox(width: 8),
-                                                Expanded(child: Text(t, style: const TextStyle(color: Colors.black54, fontWeight: FontWeight.w700))),
+                                                Expanded(
+                                                  child: Text(
+                                                    t,
+                                                    style: const TextStyle(
+                                                      color: Colors.black54,
+                                                      fontWeight:
+                                                          FontWeight.w700,
+                                                    ),
+                                                  ),
+                                                ),
                                               ],
                                             ),
                                           );
@@ -467,13 +582,17 @@ class _DriverDocumentScreenState extends State<DriverDocumentScreen> {
                                   width: double.infinity,
                                   height: 46,
                                   child: ElevatedButton.icon(
-                                    onPressed: isUploading ? null : () => handleUpload(selected.id),
+                                    onPressed: isUploading
+                                        ? null
+                                        : () => handleUpload(selected.id),
                                     icon: const Icon(Icons.camera_alt),
-                                    label: const Text('Take Photo'),
+                                    label: Text(context.l10n.text('takePhoto')),
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.indigo,
                                       foregroundColor: Colors.white,
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(18),
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -482,17 +601,23 @@ class _DriverDocumentScreenState extends State<DriverDocumentScreen> {
                                   width: double.infinity,
                                   height: 46,
                                   child: OutlinedButton.icon(
-                                    onPressed: isUploading ? null : () => handleUpload(selected.id),
+                                    onPressed: isUploading
+                                        ? null
+                                        : () => handleUpload(selected.id),
                                     icon: const Icon(Icons.upload),
-                                    label: const Text('Upload from Gallery'),
+                                    label: Text(
+                                      context.l10n.text('uploadFromGallery'),
+                                    ),
                                     style: OutlinedButton.styleFrom(
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(18),
+                                      ),
                                     ),
                                   ),
                                 ),
                               ],
                             ),
-                          )
+                          ),
                         ],
                       ),
                     ),

@@ -1,52 +1,52 @@
 import '../models/trip_model.dart';
 import '../models/user_model.dart';
 import '../models/route_model.dart';
-import '../services/supabase_service.dart';
+import '../services/backend_api_service.dart';
 
 class DriverController {
-  final SupabaseService _supabase;
+  final BackendApiService _api;
 
-  DriverController({SupabaseService? supabase})
-      : _supabase = supabase ?? const SupabaseService();
+  DriverController({BackendApiService? api})
+    : _api = api ?? BackendApiService();
 
   Future<List<TripModel>> getDriverTrips(String driverId) {
-    return _supabase.getTripsForUser(driverId);
+    return _api.getTripsForUser(driverId);
   }
 
-  Future<void> acceptRide({
-    required String tripId,
-  }) async {
-    // Convention example: 'accepted'
-    await _supabase.updateTripStatus(tripId: tripId, status: 'accepted');
+  Future<List<RouteModel>> getSavedRoutes(String driverId) {
+    return _api.getSavedRoutes(driverId);
   }
 
-  Future<void> completeTrip({
-    required String tripId,
-  }) async {
-    await _supabase.updateTripStatus(tripId: tripId, status: 'completed');
+  Future<void> acceptRide({required String tripId}) async {
+    await _api.updateTripStatus(tripId: tripId, status: 'accepted');
+  }
+
+  Future<void> cancelRide({required String tripId}) async {
+    await _api.updateTripStatus(tripId: tripId, status: 'cancelled');
+  }
+
+  Future<void> completeTrip({required String tripId}) async {
+    await _api.updateTripStatus(tripId: tripId, status: 'completed');
   }
 
   Future<UserModel?> getDriverProfile(String driverId) async {
-    // TODO: add dedicated profile fetch.
-    final user = await _supabase.getCurrentUser();
-    return (user?.id == driverId) ? user : user;
+    return _api.getDriverProfile(driverId);
   }
 
-  void updateDocument({
-    required String driverId,
-    required String docType,
-  }) {
+  Future<UserModel?> getUserProfile(String userId) async {
+    return _api.getUserProfile(userId);
+  }
+
+  void updateDocument({required String driverId, required String docType}) {
     // TODO: upload to storage and update row.
     // Placeholder only.
-    (void,)driverId;
-    (void,)docType;
+    final unusedDriverID = driverId;
+    final unusedDocType = docType;
+    (unusedDriverID, unusedDocType);
   }
 
-  Future<RouteModel?> getActiveRouteForTrip({
-    required String tripId,
-  }) async {
+  Future<RouteModel?> getActiveRouteForTrip({required String tripId}) async {
     // TODO: fetch route for a trip.
     return null;
   }
 }
-

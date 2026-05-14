@@ -1,0 +1,34 @@
+{
+  "project_info": {
+    "project_number": "68845920535",
+    "project_id": "carpooling-88c38",
+    "storage_bucket": "carpooling-88c38.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:68845920535:android:fda838baf1d5f0bc3a9752",
+        "android_client_info": {
+          "package_name": "com.example.cursorubcar"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "35285588173-d7ij7gdnamu4rfakkp4gcf9er8mcabb3.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyD3YtfZLSYHOVGk4RBFAdc55P8IeYnlP9U"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

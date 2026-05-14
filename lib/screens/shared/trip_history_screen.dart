@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-
-// REMOVED: import '../../system/widgets/bottom_nav.dart';
-// (Child screens don't need to import the bottom nav themselves)
+import '../../system/localization/app_language_controller.dart';
+import '../../system/localization/app_localizations.dart';
+import '../../system/models/trip_model.dart';
+import '../../system/state/auth_controller.dart';
+import '../../system/state/trip_controller.dart';
+import '../../system/widgets/language_menu_button.dart';
 
 enum _TripStatus { completed, cancelled }
 
@@ -56,83 +59,101 @@ class TripHistoryScreen extends StatefulWidget {
 }
 
 class _TripHistoryScreenState extends State<TripHistoryScreen> {
+  final _languageController = AppLanguageController();
+  final _authController = AuthController();
+  final _tripController = TripController();
   String filter = 'all';
+  List<_TripRecord> loadedTrips = const [];
+  bool isLoading = true;
+  String? loadError;
 
-  final mockTrips = const <_TripRecord>[
-    _TripRecord(
-      id: '1',
-      pickup: 'Salt Lake Sector V',
-      destination: 'Park Street Metro',
-      date: 'Today',
-      time: '2:30 PM',
-      fare: 249,
-      distance: '12.5 km',
-      duration: '35 min',
-      driverName: 'Rahul S.',
-      driverRating: 4.8,
-      status: _TripStatus.completed,
-      rated: true,
-      seatsUsed: 1,
-    ),
-    _TripRecord(
-      id: '2',
-      pickup: 'Howrah Station',
-      destination: 'Salt Lake Stadium',
-      date: 'Yesterday',
-      time: '6:15 PM',
-      fare: 189,
-      distance: '8.2 km',
-      duration: '28 min',
-      driverName: 'Amit K.',
-      driverRating: 4.9,
-      status: _TripStatus.completed,
-      rated: false,
-      seatsUsed: 2,
-    ),
-    _TripRecord(
-      id: '3',
-      pickup: 'New Town AA1',
-      destination: 'Netaji Airport',
-      date: 'Jan 8, 2026',
-      time: '5:00 AM',
-      fare: 599,
-      distance: '18.7 km',
-      duration: '45 min',
-      driverName: 'Sanjay M.',
-      driverRating: 4.7,
-      status: _TripStatus.completed,
-      rated: true,
-      seatsUsed: 1,
-    ),
-    _TripRecord(
-      id: '4',
-      pickup: 'Esplanade',
-      destination: 'Ruby Hospital',
-      date: 'Jan 5, 2026',
-      time: '11:30 AM',
+  @override
+  void initState() {
+    super.initState();
+    _loadTrips();
+  }
+
+  Future<void> _loadTrips() async {
+    final pleaseSignInAgain = context.l10n.text('pleaseSignInAgain');
+    setState(() {
+      isLoading = true;
+      loadError = null;
+    });
+    try {
+      final user = await _authController.getCurrentUser();
+      if (user == null) {
+        throw Exception(pleaseSignInAgain);
+      }
+      final trips = await _tripController.getTrips(user.id);
+      if (!mounted) return;
+      setState(() {
+        loadedTrips = trips.map(_mapTripRecord).toList();
+        isLoading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        loadError = error.toString().replaceFirst('Exception: ', '');
+        isLoading = false;
+      });
+    }
+  }
+
+  _TripRecord _mapTripRecord(TripModel trip) {
+    final createdAt = trip.createdAt.toLocal();
+    final status = trip.status == 'cancelled'
+        ? _TripStatus.cancelled
+        : _TripStatus.completed;
+    return _TripRecord(
+      id: trip.id,
+      pickup: trip.route?.from ?? context.l10n.text('unknownPickup'),
+      destination: trip.route?.to ?? context.l10n.text('unknownDestination'),
+      date: _formatDate(createdAt),
+      time: _formatTime(createdAt),
       fare: 0,
-      distance: '0 km',
-      duration: '0 min',
-      driverName: 'Driver',
+      distance: '-',
+      duration: '-',
+      driverName: widget.role == 'driver'
+          ? context.l10n.text('passengerTrip')
+          : context.l10n.text('driverTrip'),
       driverRating: 0,
-      status: _TripStatus.cancelled,
-      rated: false,
+      status: status,
+      rated: status == _TripStatus.completed,
       seatsUsed: 1,
-    ),
-  ];
+    );
+  }
+
+  String _formatDate(DateTime dateTime) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final date = DateTime(dateTime.year, dateTime.month, dateTime.day);
+    final difference = today.difference(date).inDays;
+    if (difference == 0) return context.l10n.text('today');
+    if (difference == 1) return context.l10n.text('yesterday');
+    return '${dateTime.year}-${_twoDigits(dateTime.month)}-${_twoDigits(dateTime.day)}';
+  }
+
+  String _formatTime(DateTime dateTime) {
+    final hour = dateTime.hour % 12 == 0 ? 12 : dateTime.hour % 12;
+    final period = dateTime.hour >= 12 ? 'PM' : 'AM';
+    return '$hour:${_twoDigits(dateTime.minute)} $period';
+  }
+
+  String _twoDigits(int value) => value.toString().padLeft(2, '0');
 
   List<_TripRecord> get filteredTrips {
     if (filter == 'completed') {
-      return mockTrips.where((t) => t.status == _TripStatus.completed).toList();
+      return loadedTrips.where((t) => t.status == _TripStatus.completed).toList();
     }
     if (filter == 'cancelled') {
-      return mockTrips.where((t) => t.status == _TripStatus.cancelled).toList();
+      return loadedTrips.where((t) => t.status == _TripStatus.cancelled).toList();
     }
-    return mockTrips;
+    return loadedTrips;
   }
 
   @override
   Widget build(BuildContext context) {
+    final l10n = context.l10n;
     // We remove Scaffold here because the Parent (DriverHome) provides it.
     return Container(
       color: Colors.white,
@@ -154,11 +175,12 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
                     ),
                   ),
                   const SizedBox(width: 8),
-                  const Text(
-                    'Trip History',
+                  Text(
+                    l10n.text('tripHistory'),
                     style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
                   ),
                   const Spacer(),
+                  LanguageMenuButton(controller: _languageController),
                 ],
               ),
             ),
@@ -169,19 +191,19 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
               child: Row(
                 children: [
                   _FilterChip(
-                    label: 'All',
+                    label: l10n.text('all'),
                     selected: filter == 'all',
                     onTap: () => setState(() => filter = 'all'),
                   ),
                   const SizedBox(width: 8),
                   _FilterChip(
-                    label: 'Completed',
+                    label: l10n.text('completed'),
                     selected: filter == 'completed',
                     onTap: () => setState(() => filter = 'completed'),
                   ),
                   const SizedBox(width: 8),
                   _FilterChip(
-                    label: 'Cancelled',
+                    label: l10n.text('cancelled'),
                     selected: filter == 'cancelled',
                     onTap: () => setState(() => filter = 'cancelled'),
                   ),
@@ -191,21 +213,30 @@ class _TripHistoryScreenState extends State<TripHistoryScreen> {
 
             // List
             Expanded(
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 100), // Bottom padding for Nav
-                children: [
-                  if (filteredTrips.isEmpty) ...[
-                    const SizedBox(height: 80),
-                    const Center(child: Text('No trips found', style: TextStyle(fontWeight: FontWeight.bold))),
-                  ] else ...[
-                    for (final trip in filteredTrips)
-                      _TripCard(
-                        trip: trip,
-                        onRebook: () => widget.onRebook?.call(trip),
-                        onRate: trip.rated ? null : () => widget.onRate?.call(trip),
-                      ),
+              child: RefreshIndicator(
+                onRefresh: _loadTrips,
+                child: ListView(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+                  children: [
+                    if (isLoading) ...[
+                      const SizedBox(height: 80),
+                      const Center(child: CircularProgressIndicator()),
+                    ] else if (loadError != null) ...[
+                      const SizedBox(height: 80),
+                      Center(child: Text(loadError!, style: const TextStyle(fontWeight: FontWeight.bold))),
+                    ] else if (filteredTrips.isEmpty) ...[
+                      const SizedBox(height: 80),
+                      Center(child: Text(l10n.text('noTripsFound'), style: const TextStyle(fontWeight: FontWeight.bold))),
+                    ] else ...[
+                      for (final trip in filteredTrips)
+                        _TripCard(
+                          trip: trip,
+                          onRebook: () => widget.onRebook?.call(trip),
+                          onRate: trip.rated ? null : () => widget.onRate?.call(trip),
+                        ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ],
@@ -267,7 +298,9 @@ class _TripCard extends StatelessWidget {
               Text('${trip.date} • ${trip.time}', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black54)),
               const Spacer(),
               Text(
-                trip.status == _TripStatus.completed ? 'Completed' : 'Cancelled',
+                trip.status == _TripStatus.completed
+                    ? context.l10n.text('completed')
+                    : context.l10n.text('cancelled'),
                 style: TextStyle(color: statusColor, fontWeight: FontWeight.bold, fontSize: 12),
               ),
             ],

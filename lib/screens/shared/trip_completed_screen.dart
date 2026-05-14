@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-enum _PaymentMethod { wallet, card, cash }
+enum PaymentMethod { wallet, card, cash }
 
 class TripCompletedScreen extends StatefulWidget {
   final String driverName;
@@ -10,15 +10,15 @@ class TripCompletedScreen extends StatefulWidget {
   final int seatsUsed;
 
   final void Function(int rating, String? feedback)? onSubmitRating;
-  final void Function(_PaymentMethod method)? onMakePayment;
+  final void Function(PaymentMethod method)? onMakePayment;
   final VoidCallback? onClose;
 
   const TripCompletedScreen({
     super.key,
-    this.driverName = 'Rakesh Kumar',
-    this.fare = 85,
-    this.tripDistance = '4.2 km',
-    this.tripDuration = '18 min',
+    this.driverName = '',
+    this.fare = 0,
+    this.tripDistance = '',
+    this.tripDuration = '',
     this.seatsUsed = 1,
     this.onSubmitRating,
     this.onMakePayment,
@@ -30,16 +30,34 @@ class TripCompletedScreen extends StatefulWidget {
 }
 
 class _TripCompletedScreenState extends State<TripCompletedScreen> {
+  static const _primary = Color(0xFF2563EB);
+  static const _accent = Color(0xFF14B8A6);
+  static const _ink = Color(0xFF0F172A);
+  static const _muted = Color(0xFF64748B);
+  static const _line = Color(0xFFE2E8F0);
+  static const _surface = Colors.white;
+  static const _background = Color(0xFFF8FAFC);
+
   int rating = 5;
   final selectedFeedback = <int>[];
   int? tip;
-  _PaymentMethod selectedPayment = _PaymentMethod.wallet;
+  PaymentMethod selectedPayment = PaymentMethod.wallet;
   bool isPaid = false;
+
+  void _handleDone() {
+    final feedbackText = selectedFeedback.isEmpty
+        ? null
+        : selectedFeedback.join(',');
+    widget.onSubmitRating?.call(rating, feedbackText);
+    widget.onClose?.call();
+  }
 
   @override
   Widget build(BuildContext context) {
     final totalWithTip = widget.fare + (tip ?? 0);
-    final driverInitial = widget.driverName.isNotEmpty ? widget.driverName[0] : '?';
+    final driverInitial = widget.driverName.isNotEmpty
+        ? widget.driverName[0]
+        : '?';
 
     final quickFeedback = [
       {'id': 1, 'label': 'Great conversation', 'icon': Icons.message},
@@ -49,44 +67,60 @@ class _TripCompletedScreenState extends State<TripCompletedScreen> {
 
     const tipOptions = [10, 20, 50];
 
-    final paymentMethods = <_PaymentMethod, String>{
-      _PaymentMethod.wallet: 'Wallet',
-      _PaymentMethod.card: 'Card',
-      _PaymentMethod.cash: 'Cash',
-    };
-
     return Scaffold(
+      backgroundColor: _background,
       body: SafeArea(
         child: Column(
           children: [
             Container(
-              padding: const EdgeInsets.fromLTRB(16, 26, 16, 22),
-              decoration: BoxDecoration(
-                color: Colors.indigo,
-                borderRadius: const BorderRadius.vertical(bottom: Radius.circular(26)),
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(20, 26, 20, 24),
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [_primary, _accent],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.vertical(
+                  bottom: Radius.circular(18),
+                ),
               ),
               child: Column(
                 children: [
                   Container(
-                    width: 62,
-                    height: 62,
+                    width: 64,
+                    height: 64,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: Colors.white.withOpacity(0.25),
+                      color: Colors.white.withValues(alpha: 0.18),
+                      border: Border.all(
+                        color: Colors.white.withValues(alpha: 0.36),
+                      ),
                     ),
                     child: const Center(
-                      child: Icon(Icons.check_circle, color: Colors.white, size: 34),
+                      child: Icon(
+                        Icons.check_circle,
+                        color: Colors.white,
+                        size: 34,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 12),
                   const Text(
-                    'Trip Completed!',
-                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Colors.white),
+                    'Trip completed',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                      color: Colors.white,
+                    ),
                   ),
                   const SizedBox(height: 6),
                   const Text(
                     'Thanks for riding with RidePool',
-                    style: TextStyle(color: Colors.white70, fontWeight: FontWeight.w600),
+                    style: TextStyle(
+                      color: Color(0xFFEFF6FF),
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ],
               ),
@@ -94,14 +128,21 @@ class _TripCompletedScreenState extends State<TripCompletedScreen> {
 
             Expanded(
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 18),
                 children: [
                   Container(
-                    padding: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(22),
-                      border: Border.all(color: Colors.grey.shade200),
+                      color: _surface,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: _line),
+                      boxShadow: [
+                        BoxShadow(
+                          color: _ink.withValues(alpha: 0.06),
+                          blurRadius: 18,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
                     ),
                     child: Column(
                       children: [
@@ -113,12 +154,20 @@ class _TripCompletedScreenState extends State<TripCompletedScreen> {
                                 children: [
                                   Text(
                                     'Total fare (${widget.seatsUsed} ${widget.seatsUsed > 1 ? 'seats' : 'seat'})',
-                                    style: TextStyle(color: Colors.black54, fontWeight: FontWeight.w700, fontSize: 12),
+                                    style: const TextStyle(
+                                      color: _muted,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 12,
+                                    ),
                                   ),
                                   const SizedBox(height: 6),
                                   Text(
                                     '₹${widget.fare.toStringAsFixed(0)}',
-                                    style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w900),
+                                    style: const TextStyle(
+                                      color: _ink,
+                                      fontSize: 32,
+                                      fontWeight: FontWeight.w900,
+                                    ),
                                   ),
                                 ],
                               ),
@@ -126,35 +175,72 @@ class _TripCompletedScreenState extends State<TripCompletedScreen> {
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
-                                Text(widget.tripDistance, style: const TextStyle(color: Colors.black54, fontWeight: FontWeight.w700, fontSize: 12)),
+                                Text(
+                                  widget.tripDistance,
+                                  style: const TextStyle(
+                                    color: _muted,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 12,
+                                  ),
+                                ),
                                 const SizedBox(height: 6),
-                                Text(widget.tripDuration, style: const TextStyle(color: Colors.indigo, fontWeight: FontWeight.w800, fontSize: 12)),
+                                Text(
+                                  widget.tripDuration,
+                                  style: const TextStyle(
+                                    color: _primary,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 12,
+                                  ),
+                                ),
                               ],
                             ),
                           ],
                         ),
-                        const Divider(height: 20),
+                        const Divider(height: 24, color: _line),
                         Row(
                           children: [
                             CircleAvatar(
                               radius: 24,
-                              backgroundColor: Colors.grey.shade200,
-                              child: Text(driverInitial, style: const TextStyle(fontWeight: FontWeight.w900)),
+                              backgroundColor: const Color(0xFFEFF6FF),
+                              child: Text(
+                                driverInitial,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w900,
+                                  color: _primary,
+                                ),
+                              ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(widget.driverName, style: const TextStyle(fontWeight: FontWeight.w900)),
+                                  Text(
+                                    widget.driverName,
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w900,
+                                      color: _ink,
+                                    ),
+                                  ),
                                   const SizedBox(height: 6),
-                                  const Text('Your driver', style: TextStyle(color: Colors.black54, fontWeight: FontWeight.w700, fontSize: 12)),
+                                  const Text(
+                                    'Your driver',
+                                    style: TextStyle(
+                                      color: _muted,
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 12,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
                             IconButton(
                               onPressed: () {},
-                              icon: const Icon(Icons.share),
+                              style: IconButton.styleFrom(
+                                backgroundColor: const Color(0xFFF1F5F9),
+                                foregroundColor: _primary,
+                              ),
+                              icon: const Icon(Icons.ios_share_rounded),
                             ),
                           ],
                         ),
@@ -165,7 +251,15 @@ class _TripCompletedScreenState extends State<TripCompletedScreen> {
                   const SizedBox(height: 16),
 
                   if (!isPaid) ...[
-                    const Text('Pay with', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+                    const Text(
+                      'Pay with',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: _ink,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 18,
+                      ),
+                    ),
                     const SizedBox(height: 12),
                     Row(
                       children: [
@@ -173,8 +267,10 @@ class _TripCompletedScreenState extends State<TripCompletedScreen> {
                           child: _PaymentCard(
                             label: 'Wallet',
                             icon: Icons.account_balance_wallet,
-                            selected: selectedPayment == _PaymentMethod.wallet,
-                            onTap: () => setState(() => selectedPayment = _PaymentMethod.wallet),
+                            selected: selectedPayment == PaymentMethod.wallet,
+                            onTap: () => setState(
+                              () => selectedPayment = PaymentMethod.wallet,
+                            ),
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -182,8 +278,10 @@ class _TripCompletedScreenState extends State<TripCompletedScreen> {
                           child: _PaymentCard(
                             label: 'Card',
                             icon: Icons.credit_card,
-                            selected: selectedPayment == _PaymentMethod.card,
-                            onTap: () => setState(() => selectedPayment = _PaymentMethod.card),
+                            selected: selectedPayment == PaymentMethod.card,
+                            onTap: () => setState(
+                              () => selectedPayment = PaymentMethod.card,
+                            ),
                           ),
                         ),
                       ],
@@ -192,8 +290,9 @@ class _TripCompletedScreenState extends State<TripCompletedScreen> {
                     _PaymentCard(
                       label: 'Cash',
                       icon: Icons.money,
-                      selected: selectedPayment == _PaymentMethod.cash,
-                      onTap: () => setState(() => selectedPayment = _PaymentMethod.cash),
+                      selected: selectedPayment == PaymentMethod.cash,
+                      onTap: () =>
+                          setState(() => selectedPayment = PaymentMethod.cash),
                     ),
 
                     const SizedBox(height: 14),
@@ -203,21 +302,42 @@ class _TripCompletedScreenState extends State<TripCompletedScreen> {
                         widget.onMakePayment?.call(selectedPayment);
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.indigo,
+                        backgroundColor: _primary,
                         foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
-                      child: Text(
-                        'Pay ₹${totalWithTip.toStringAsFixed(0)}',
-                        style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.lock_rounded, size: 18),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Pay ₹${totalWithTip.toStringAsFixed(0)}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 16,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
 
                   if (isPaid) ...[
                     const SizedBox(height: 6),
-                    const Text('Rate your ride', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18)),
+                    const Text(
+                      'Rate your ride',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: _ink,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 18,
+                      ),
+                    ),
                     const SizedBox(height: 12),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -228,14 +348,22 @@ class _TripCompletedScreenState extends State<TripCompletedScreen> {
                           onPressed: () => setState(() => rating = star),
                           icon: Icon(
                             selected ? Icons.star : Icons.star_border,
-                            color: selected ? Colors.indigo : Colors.black38,
+                            color: selected ? const Color(0xFFF59E0B) : _line,
                             size: 34,
                           ),
                         );
                       }),
                     ),
                     const SizedBox(height: 18),
-                    const Text('What went well?', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+                    const Text(
+                      'What went well?',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: _ink,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                      ),
+                    ),
                     const SizedBox(height: 12),
                     Wrap(
                       alignment: WrapAlignment.center,
@@ -247,7 +375,17 @@ class _TripCompletedScreenState extends State<TripCompletedScreen> {
                         return ChoiceChip(
                           label: Text(f['label'] as String),
                           selected: selected,
-                          selectedColor: Colors.indigo.withOpacity(0.12),
+                          selectedColor: _accent.withValues(alpha: 0.14),
+                          backgroundColor: const Color(0xFFF1F5F9),
+                          labelStyle: TextStyle(
+                            color: selected ? const Color(0xFF0F766E) : _ink,
+                            fontWeight: FontWeight.w800,
+                          ),
+                          side: BorderSide(
+                            color: selected
+                                ? _accent.withValues(alpha: 0.4)
+                                : Colors.transparent,
+                          ),
                           onSelected: (_) => setState(() {
                             if (selected) {
                               selectedFeedback.remove(id);
@@ -259,7 +397,15 @@ class _TripCompletedScreenState extends State<TripCompletedScreen> {
                       }).toList(),
                     ),
                     const SizedBox(height: 18),
-                    const Text('Add a tip?', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+                    const Text(
+                      'Add a tip?',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        color: _ink,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                      ),
+                    ),
                     const SizedBox(height: 12),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
@@ -270,7 +416,19 @@ class _TripCompletedScreenState extends State<TripCompletedScreen> {
                           child: ChoiceChip(
                             label: Text('₹$amount'),
                             selected: selected,
-                            onSelected: (_) => setState(() => tip = selected ? null : amount),
+                            selectedColor: _primary.withValues(alpha: 0.12),
+                            backgroundColor: const Color(0xFFF1F5F9),
+                            labelStyle: TextStyle(
+                              color: selected ? _primary : _ink,
+                              fontWeight: FontWeight.w900,
+                            ),
+                            side: BorderSide(
+                              color: selected
+                                  ? _primary.withValues(alpha: 0.35)
+                                  : Colors.transparent,
+                            ),
+                            onSelected: (_) =>
+                                setState(() => tip = selected ? null : amount),
                           ),
                         );
                       }).toList(),
@@ -279,18 +437,29 @@ class _TripCompletedScreenState extends State<TripCompletedScreen> {
                     SizedBox(
                       height: 52,
                       child: ElevatedButton(
-                        onPressed: () {
-                          final feedbackText = selectedFeedback.isEmpty
-                              ? null
-                              : selectedFeedback.join(',');
-                          widget.onSubmitRating?.call(rating, feedbackText);
-                        },
+                        onPressed: _handleDone,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.indigo,
+                          backgroundColor: _accent,
                           foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
                         ),
-                        child: const Text('Done', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 16)),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.check_rounded, size: 20),
+                            SizedBox(width: 8),
+                            Text(
+                              'Done',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w900,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                     const SizedBox(height: 14),
@@ -322,28 +491,67 @@ class _PaymentCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(18),
-      child: Container(
+      borderRadius: BorderRadius.circular(12),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 180),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: selected ? Colors.indigo.withOpacity(0.08) : Colors.grey.shade200,
-          borderRadius: BorderRadius.circular(18),
+          color: selected ? const Color(0xFFEFF6FF) : Colors.white,
+          borderRadius: BorderRadius.circular(12),
           border: Border.all(
-            color: selected ? Colors.indigo.withOpacity(0.45) : Colors.grey.shade200,
+            color: selected
+                ? _TripCompletedScreenState._primary
+                : _TripCompletedScreenState._line,
             width: selected ? 2 : 1,
           ),
+          boxShadow: [
+            if (selected)
+              BoxShadow(
+                color: _TripCompletedScreenState._primary.withValues(
+                  alpha: 0.12,
+                ),
+                blurRadius: 14,
+                offset: const Offset(0, 8),
+              ),
+          ],
         ),
         child: Row(
           children: [
-            Icon(icon, color: selected ? Colors.indigo : Colors.black54),
-            const SizedBox(width: 10),
-            Text(
-              label,
-              style: TextStyle(
-                fontWeight: FontWeight.w900,
-                color: selected ? Colors.indigo : Colors.black54,
+            Container(
+              width: 34,
+              height: 34,
+              decoration: BoxDecoration(
+                color: selected
+                    ? _TripCompletedScreenState._primary.withValues(alpha: 0.12)
+                    : const Color(0xFFF1F5F9),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(
+                icon,
+                color: selected
+                    ? _TripCompletedScreenState._primary
+                    : _TripCompletedScreenState._muted,
+                size: 19,
               ),
             ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontWeight: FontWeight.w900,
+                  color: selected
+                      ? _TripCompletedScreenState._primary
+                      : _TripCompletedScreenState._ink,
+                ),
+              ),
+            ),
+            if (selected)
+              const Icon(
+                Icons.check_circle_rounded,
+                color: _TripCompletedScreenState._accent,
+                size: 20,
+              ),
           ],
         ),
       ),

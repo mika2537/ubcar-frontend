@@ -47,8 +47,9 @@ func (r *MongoRepository) Close(ctx context.Context) error {
 
 func (r *MongoRepository) ensureIndexes(ctx context.Context) error {
 	_, err := r.trips.Indexes().CreateMany(ctx, []mongo.IndexModel{
-		{Keys: bson.D{{Key: "passengerId", Value: 1}}},
-		{Keys: bson.D{{Key: "driverId", Value: 1}}},
+		{Keys: bson.D{{Key: "id", Value: 1}}},
+		{Keys: bson.D{{Key: "passengerId", Value: 1}, {Key: "createdAt", Value: -1}}},
+		{Keys: bson.D{{Key: "driverId", Value: 1}, {Key: "status", Value: 1}}},
 		{Keys: bson.D{{Key: "status", Value: 1}}},
 	})
 	if err != nil {
@@ -56,7 +57,12 @@ func (r *MongoRepository) ensureIndexes(ctx context.Context) error {
 	}
 
 	_, err = r.chat.Indexes().CreateMany(ctx, []mongo.IndexModel{
+		{Keys: bson.D{{Key: "id", Value: 1}}},
 		{Keys: bson.D{{Key: "tripId", Value: 1}, {Key: "createdAt", Value: 1}}},
+		{
+			Keys:    bson.D{{Key: "createdAt", Value: 1}},
+			Options: options.Index().SetExpireAfterSeconds(int32((30 * 24 * time.Hour).Seconds())),
+		},
 	})
 	return err
 }
@@ -72,6 +78,30 @@ func (r *MongoRepository) CreateTrip(ctx context.Context, trip domain.Trip) (dom
 	trip.UpdatedAt = now
 
 	_, err := r.trips.InsertOne(ctx, trip)
+	return trip, err
+}
+
+func (r *MongoRepository) UpsertTrip(ctx context.Context, trip domain.Trip) (domain.Trip, error) {
+	if trip.ID == "" {
+		trip.ID = uuid.NewString()
+	}
+	now := time.Now().UTC()
+	if trip.CreatedAt.IsZero() {
+		trip.CreatedAt = now
+	}
+	if trip.UpdatedAt.IsZero() {
+		trip.UpdatedAt = now
+	}
+
+	update := bson.M{
+		"$set": trip,
+	}
+	_, err := r.trips.UpdateOne(
+		ctx,
+		bson.M{"id": trip.ID},
+		update,
+		options.Update().SetUpsert(true),
+	)
 	return trip, err
 }
 
@@ -93,6 +123,15 @@ func (r *MongoRepository) ListTripsByUser(ctx context.Context, userID string) ([
 		return nil, err
 	}
 	return trips, nil
+}
+
+func (r *MongoRepository) GetTripByID(ctx context.Context, tripID string) (domain.Trip, error) {
+	var trip domain.Trip
+	err := r.trips.FindOne(ctx, bson.M{"id": tripID}).Decode(&trip)
+	if err == mongo.ErrNoDocuments {
+		return domain.Trip{}, ErrNotFound
+	}
+	return trip, err
 }
 
 func (r *MongoRepository) UpdateTripStatus(ctx context.Context, tripID, status string) (domain.Trip, error) {
@@ -122,6 +161,26 @@ func (r *MongoRepository) CreateChatMessage(ctx context.Context, message domain.
 	}
 
 	_, err := r.chat.InsertOne(ctx, message)
+	return message, err
+}
+
+func (r *MongoRepository) UpsertChatMessage(ctx context.Context, message domain.ChatMessage) (domain.ChatMessage, error) {
+	if message.ID == "" {
+		message.ID = uuid.NewString()
+	}
+	if message.CreatedAt.IsZero() {
+		message.CreatedAt = time.Now().UTC()
+	}
+
+	update := bson.M{
+		"$set": message,
+	}
+	_, err := r.chat.UpdateOne(
+		ctx,
+		bson.M{"id": message.ID},
+		update,
+		options.Update().SetUpsert(true),
+	)
 	return message, err
 }
 

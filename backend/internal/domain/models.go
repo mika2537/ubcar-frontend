@@ -3,12 +3,18 @@ package domain
 import "time"
 
 type User struct {
-	ID           string    `json:"id" bson:"id"`
-	Name         string    `json:"name" bson:"name"`
-	Email        string    `json:"email" bson:"email"`
-	PasswordHash string    `json:"-" bson:"passwordHash"`
-	Role         string    `json:"role" bson:"role"`
-	CreatedAt    time.Time `json:"createdAt" bson:"createdAt"`
+	ID              string    `json:"id" bson:"id"`
+	Name            string    `json:"name" bson:"name"`
+	Email           string    `json:"email" bson:"email"`
+	PasswordHash    string    `json:"-" bson:"passwordHash"`
+	Role            string    `json:"role" bson:"role"`
+	PhoneNumber     string    `json:"phoneNumber,omitempty" bson:"phoneNumber,omitempty"`
+	Gender          string    `json:"gender,omitempty" bson:"gender,omitempty"`
+	Age             int       `json:"age,omitempty" bson:"age,omitempty"`
+	CarModel        string    `json:"carModel,omitempty" bson:"carModel,omitempty"`
+	CarPlate        string    `json:"carPlate,omitempty" bson:"carPlate,omitempty"`
+	DriverLicenseID string    `json:"driverLicenseId,omitempty" bson:"driverLicenseId,omitempty"`
+	CreatedAt       time.Time `json:"createdAt" bson:"createdAt"`
 }
 
 type SavedRoute struct {
@@ -16,17 +22,21 @@ type SavedRoute struct {
 	UserID    string    `json:"userId" bson:"userId"`
 	From      string    `json:"from" bson:"from"`
 	To        string    `json:"to" bson:"to"`
+	Midpoints []string  `json:"midpoints" bson:"midpoints"`
 	CreatedAt time.Time `json:"createdAt" bson:"createdAt"`
 }
 
 type Trip struct {
-	ID          string     `json:"id" bson:"id"`
-	PassengerID string     `json:"passengerId" bson:"passengerId"`
-	DriverID    string     `json:"driverId,omitempty" bson:"driverId,omitempty"`
-	Route       SavedRoute `json:"route" bson:"route"`
-	Status      string     `json:"status" bson:"status"`
-	CreatedAt   time.Time  `json:"createdAt" bson:"createdAt"`
-	UpdatedAt   time.Time  `json:"updatedAt" bson:"updatedAt"`
+	ID              string     `json:"id" bson:"id"`
+	PassengerID     string     `json:"passengerId" bson:"passengerId"`
+	PassengerName   string     `json:"passengerName,omitempty" bson:"passengerName,omitempty"`
+	PassengerRating float64    `json:"passengerRating,omitempty" bson:"passengerRating,omitempty"`
+	DriverID        string     `json:"driverId,omitempty" bson:"driverId,omitempty"`
+	Route           SavedRoute `json:"route" bson:"route"`
+	Status          string     `json:"status" bson:"status"`
+	SeatsRequested  int        `json:"seatsRequested,omitempty" bson:"seatsRequested,omitempty"`
+	CreatedAt       time.Time  `json:"createdAt" bson:"createdAt"`
+	UpdatedAt       time.Time  `json:"updatedAt" bson:"updatedAt"`
 }
 
 type ChatMessage struct {

@@ -39,7 +39,18 @@ func main() {
 	defer cacheRepo.Close()
 
 	authService := service.NewAuthService(cfg.JWTSecret, cacheRepo, postgresRepo)
-	server := api.NewServer(postgresRepo, mongoRepo, cacheRepo, authService)
+	if cfg.SeedMockData {
+		seedCtx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		defer cancel()
+
+		seeder := service.NewMockSeedService(postgresRepo, mongoRepo, cacheRepo, authService)
+		if err := seeder.Seed(seedCtx); err != nil {
+			log.Fatal(err)
+		}
+		log.Printf("mock data seeded into postgres, mongo, and redis")
+	}
+
+	server := api.NewServer(postgresRepo, mongoRepo, cacheRepo, authService, cfg.GoogleClientID)
 
 	httpServer := &http.Server{
 		Addr:              ":" + cfg.Port,
@@ -51,7 +62,7 @@ func main() {
 	}
 
 	go func() {
-		log.Printf("backend listening on http://localhost:%s", cfg.Port)
+		log.Printf("backend listening on %s", cfg.Port)
 		if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			log.Fatal(err)
 		}

@@ -11,15 +11,15 @@ class SearchingDriverScreen extends StatefulWidget {
   final String routeName;
   final String driverName;
   final VoidCallback? onCancel;
-  final VoidCallback? onAccepted;
+  final Future<void> Function()? onAccepted;
 
   const SearchingDriverScreen({
     super.key,
-    this.pickup = 'Salt Lake Sector V',
-    this.destination = 'Park Street Metro Station',
+    this.pickup = '',
+    this.destination = '',
     this.seatsRequested = 1,
-    this.routeName = 'Daily Office Commute',
-    this.driverName = 'Rajesh Kumar',
+    this.routeName = '',
+    this.driverName = '',
     this.onCancel,
     this.onAccepted,
   });
@@ -48,8 +48,8 @@ class _SearchingDriverScreenState extends State<SearchingDriverScreen> {
     _acceptTimer = Timer(const Duration(seconds: 4), () {
       if (!mounted) return;
       setState(() => status = _SearchStatus.accepted);
-      Timer(const Duration(milliseconds: 1500), () {
-        widget.onAccepted?.call();
+      Timer(const Duration(milliseconds: 1500), () async {
+        await widget.onAccepted?.call();
       });
     });
   }
@@ -72,11 +72,17 @@ class _SearchingDriverScreenState extends State<SearchingDriverScreen> {
   Widget build(BuildContext context) {
     final isAccepted = status == _SearchStatus.accepted;
     final title = isAccepted ? 'Request Accepted!' : 'Waiting for Confirmation';
+    final driverLabel = widget.driverName.trim().isEmpty
+        ? 'the driver'
+        : widget.driverName.trim();
     final subtitle = isAccepted
-        ? '${widget.driverName} accepted your seat request'
-        : '${widget.driverName} to accept...';
+        ? '$driverLabel accepted your seat request'
+        : 'Waiting for $driverLabel to accept...';
     final seatLabel = widget.seatsRequested > 1 ? 'seats' : 'seat';
     final statusChip = isAccepted ? 'Accepted' : 'Pending';
+    final routeLabel = widget.routeName.trim().isEmpty
+        ? '${widget.pickup.trim().isEmpty ? 'Pickup' : widget.pickup} to ${widget.destination.trim().isEmpty ? 'Destination' : widget.destination}'
+        : widget.routeName;
 
     final sheetHeight = MediaQuery.of(context).size.height * 0.46;
 
@@ -84,11 +90,7 @@ class _SearchingDriverScreenState extends State<SearchingDriverScreen> {
       body: SafeArea(
         child: Stack(
           children: [
-            Positioned.fill(
-              child: Container(
-                color: Colors.grey.shade200,
-              ),
-            ),
+            Positioned.fill(child: Container(color: Colors.grey.shade200)),
             Positioned.fill(
               child: IgnorePointer(
                 child: Opacity(
@@ -96,10 +98,11 @@ class _SearchingDriverScreenState extends State<SearchingDriverScreen> {
                   child: GridView.builder(
                     padding: EdgeInsets.zero,
                     physics: const NeverScrollableScrollPhysics(),
-                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 8,
-                    ),
-                    itemBuilder: (_, __) => const SizedBox(),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 8,
+                        ),
+                    itemBuilder: (_, _) => const SizedBox(),
                   ),
                 ),
               ),
@@ -116,9 +119,13 @@ class _SearchingDriverScreenState extends State<SearchingDriverScreen> {
                     height: isAccepted ? 24 : 36,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: isAccepted ? Colors.green.withOpacity(0.20) : Colors.indigo.withOpacity(0.18),
+                      color: isAccepted
+                          ? Colors.green.withOpacity(0.20)
+                          : Colors.indigo.withOpacity(0.18),
                       border: Border.all(
-                        color: isAccepted ? Colors.green.withOpacity(0.35) : Colors.indigo.withOpacity(0.40),
+                        color: isAccepted
+                            ? Colors.green.withOpacity(0.35)
+                            : Colors.indigo.withOpacity(0.40),
                         width: 2,
                       ),
                     ),
@@ -129,7 +136,9 @@ class _SearchingDriverScreenState extends State<SearchingDriverScreen> {
                     height: 70,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: isAccepted ? Colors.green.withOpacity(0.28) : Colors.indigo.withOpacity(0.28),
+                      color: isAccepted
+                          ? Colors.green.withOpacity(0.28)
+                          : Colors.indigo.withOpacity(0.28),
                     ),
                   ),
                   Container(
@@ -140,15 +149,24 @@ class _SearchingDriverScreenState extends State<SearchingDriverScreen> {
                       color: isAccepted ? Colors.green : Colors.indigo,
                       boxShadow: [
                         BoxShadow(
-                          color: (isAccepted ? Colors.green : Colors.indigo).withOpacity(0.35),
+                          color: (isAccepted ? Colors.green : Colors.indigo)
+                              .withOpacity(0.35),
                           blurRadius: 22,
-                        )
+                        ),
                       ],
                     ),
                     child: Center(
                       child: isAccepted
-                          ? const Icon(Icons.check, color: Colors.white, size: 28)
-                          : const Icon(Icons.people, color: Colors.white, size: 28),
+                          ? const Icon(
+                              Icons.check,
+                              color: Colors.white,
+                              size: 28,
+                            )
+                          : const Icon(
+                              Icons.people,
+                              color: Colors.white,
+                              size: 28,
+                            ),
                     ),
                   ),
                 ],
@@ -176,7 +194,9 @@ class _SearchingDriverScreenState extends State<SearchingDriverScreen> {
                 child: Container(
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(26)),
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(26),
+                    ),
                   ),
                   child: Column(
                     children: [
@@ -198,13 +218,19 @@ class _SearchingDriverScreenState extends State<SearchingDriverScreen> {
                             children: [
                               Text(
                                 title,
-                                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900),
+                                style: const TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w900,
+                                ),
                                 textAlign: TextAlign.center,
                               ),
                               const SizedBox(height: 6),
                               Text(
                                 subtitle,
-                                style: const TextStyle(color: Colors.black54, fontWeight: FontWeight.w700),
+                                style: const TextStyle(
+                                  color: Colors.black54,
+                                  fontWeight: FontWeight.w700,
+                                ),
                                 textAlign: TextAlign.center,
                               ),
                               const SizedBox(height: 12),
@@ -227,7 +253,7 @@ class _SearchingDriverScreenState extends State<SearchingDriverScreen> {
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Text(
-                                      widget.routeName,
+                                      routeLabel,
                                       style: const TextStyle(
                                         fontWeight: FontWeight.w800,
                                         color: Colors.indigo,
@@ -235,7 +261,8 @@ class _SearchingDriverScreenState extends State<SearchingDriverScreen> {
                                     ),
                                     const SizedBox(height: 12),
                                     Row(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Column(
                                           children: [
@@ -258,10 +285,12 @@ class _SearchingDriverScreenState extends State<SearchingDriverScreen> {
                                               decoration: BoxDecoration(
                                                 shape: BoxShape.circle,
                                                 border: Border.all(
-                                                  color: Colors.indigo.withOpacity(0.5),
+                                                  color: Colors.indigo
+                                                      .withOpacity(0.5),
                                                   width: 2,
                                                 ),
-                                                color: Colors.indigo.withOpacity(0.12),
+                                                color: Colors.indigo
+                                                    .withOpacity(0.12),
                                               ),
                                             ),
                                           ],
@@ -269,13 +298,30 @@ class _SearchingDriverScreenState extends State<SearchingDriverScreen> {
                                         const SizedBox(width: 12),
                                         Expanded(
                                           child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
                                             children: [
-                                              Text(widget.pickup,
-                                                  style: const TextStyle(fontWeight: FontWeight.w800)),
+                                              Text(
+                                                widget.pickup.isEmpty
+                                                    ? 'Pickup not set'
+                                                    : widget.pickup,
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.w800,
+                                                ),
+                                              ),
                                               const SizedBox(height: 10),
-                                              Text(widget.destination,
-                                                  style: const TextStyle(fontWeight: FontWeight.w800)),
+                                              Text(
+                                                widget.destination.isEmpty
+                                                    ? 'Destination not set'
+                                                    : widget.destination,
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.w800,
+                                                ),
+                                              ),
                                             ],
                                           ),
                                         ),
@@ -289,14 +335,21 @@ class _SearchingDriverScreenState extends State<SearchingDriverScreen> {
                                 mainAxisAlignment: MainAxisAlignment.center,
                                 children: [
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: 10,
+                                    ),
                                     decoration: BoxDecoration(
                                       color: Colors.indigo.withOpacity(0.10),
                                       borderRadius: BorderRadius.circular(999),
                                     ),
                                     child: Row(
                                       children: [
-                                        const Icon(Icons.people, size: 18, color: Colors.indigo),
+                                        const Icon(
+                                          Icons.people,
+                                          size: 18,
+                                          color: Colors.indigo,
+                                        ),
                                         const SizedBox(width: 8),
                                         Text(
                                           '${widget.seatsRequested} $seatLabel',
@@ -310,16 +363,23 @@ class _SearchingDriverScreenState extends State<SearchingDriverScreen> {
                                   ),
                                   const SizedBox(width: 12),
                                   Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 14,
+                                      vertical: 10,
+                                    ),
                                     decoration: BoxDecoration(
-                                      color: isAccepted ? Colors.green.withOpacity(0.10) : Colors.orange.withOpacity(0.12),
+                                      color: isAccepted
+                                          ? Colors.green.withOpacity(0.10)
+                                          : Colors.orange.withOpacity(0.12),
                                       borderRadius: BorderRadius.circular(999),
                                     ),
                                     child: Text(
                                       statusChip,
                                       style: TextStyle(
                                         fontWeight: FontWeight.w900,
-                                        color: isAccepted ? Colors.green.shade800 : Colors.orange.shade800,
+                                        color: isAccepted
+                                            ? Colors.green.shade800
+                                            : Colors.orange.shade800,
                                       ),
                                     ),
                                   ),
@@ -332,13 +392,22 @@ class _SearchingDriverScreenState extends State<SearchingDriverScreen> {
                                   child: OutlinedButton(
                                     onPressed: widget.onCancel,
                                     style: OutlinedButton.styleFrom(
-                                      padding: const EdgeInsets.symmetric(vertical: 14),
-                                      side: BorderSide(color: Colors.indigo.withOpacity(0.4)),
-                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 14,
+                                      ),
+                                      side: BorderSide(
+                                        color: Colors.indigo.withOpacity(0.4),
+                                      ),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
                                     ),
                                     child: const Text(
                                       'Cancel Request',
-                                      style: TextStyle(fontWeight: FontWeight.w900, color: Colors.indigo),
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w900,
+                                        color: Colors.indigo,
+                                      ),
                                     ),
                                   ),
                                 ),
